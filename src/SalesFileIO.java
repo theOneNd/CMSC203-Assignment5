@@ -16,75 +16,80 @@ import java.io.*;
 import java.util.*;
 
 
+/**
+ * Handles reading sales data from a file and writing a summary to a file.
+ */
+
 public class SalesFileIO {
 
+	
     /**
-     * Reads sales data from the specified file into a 2D double array.
-     * Each non-empty line becomes one row; space-separated tokens become columns.
-     *
-     * @param filename path to the input text file
-     * @return 2D array of sales values
+     * Reads space-separated sales values from a file into a ragged 2D array.
+     * Each line becomes one row; values on each line become the columns.
+     * @param filename path to the input file
+     * @return ragged 2D array of sales values
+     * @throws IOException if the file cannot be read
      */
-    public static double[][] readSalesData(String filename)
-            throws IOException, NumberFormatException {
+	
+	public static double[][] readSalesData(String filename) throws IOException {
+		
+		try (Scanner inputFile = new Scanner(new File(filename))) {
+			
+	        ArrayList<double[]> rows = new ArrayList<double[]>();
 
-        List<double[]> rows = new ArrayList<>();
+	        while (inputFile.hasNextLine()) {
 
-        Scanner fileScanner = new Scanner(new File(filename));
-        while (fileScanner.hasNextLine()) {
-            String line = fileScanner.nextLine().trim();
-            if (line.isEmpty()) {
-                continue;
-            }
-            String[] tokens = line.split("\\s+");
-            double[] row = new double[tokens.length];
-            for (int i = 0; i < tokens.length; i++) {
-                row[i] = Double.parseDouble(tokens[i]);
-            }
-            rows.add(row);
-        }
-        fileScanner.close();
+	            String inputLine = inputFile.nextLine();
 
-        // Convert list to array
-        double[][] data = new double[rows.size()][];
-        for (int i = 0; i < rows.size(); i++) {
-            data[i] = rows.get(i);
-        }
-        return data;
-    }
 
+	            String[] stringList = inputLine.split(" ");
+
+	            double[] row = new double[stringList.length];
+
+	            for (int i = 0; i < stringList.length; i++) {
+	                row[i] = Double.parseDouble(stringList[i]);
+	            }
+
+	            rows.add(row);
+	        }
+
+	        return rows.toArray(new double[0][]);			
+		}
+	}
+	
+	
+	
     /**
-     * Writes a formatted summary of sales statistics to the specified file.
-     * Includes overall total, average, highest/lowest, row totals, and column totals.
-     *
-     * @param filename path to the output text file
-     * @param 2D array of sales values
+     * Appends a sales summary (total, average, row totals, column totals) to a file.
+     * @param filename path to the output file
+     * @param data ragged 2D array of sales values
+     * @throws IOException if the file cannot be written
      */
-    public static void writeSummary(String filename, double[][] data) throws IOException {
-        PrintWriter writer = new PrintWriter(new FileWriter(filename));
+	
+	public static void writeSummary(String filename, double[][] data) throws IOException {
+		
+		try (PrintWriter pw = new PrintWriter(new FileWriter(filename, true))) {
+			
+			int totalRows = data.length;
 
-        double total   = SalesDataUtility.getTotal(data);
-        double average = SalesDataUtility.getAverage(data);
+			pw.printf("Total sales: %.2f%n", SalesDataUtility.getTotal(data));
+			pw.printf("Average sale: %.2f%n", SalesDataUtility.getAverage(data));
+			
+			/// for each row
+			for (int i = 0; i < totalRows; i++) {				
+				pw.printf("Row %d total: %.2f%n", i, SalesDataUtility.getRowTotal(data, i));
+			}			
+			
+			/// for each column
+			int totalColumns = SalesDataUtility.getLongestRowLength(data);
+			for (int i = 0; i < totalColumns; i++) {
+				
+				pw.printf("Column %d total: %.2f%n", i, SalesDataUtility.getColumnTotal(data, i));
+			}
+			pw.println();
 
-        writer.printf("Total sales: %.2f%n", total);
-        writer.printf("Average sale: %.2f%n", average);
-
-        // Row totals
-        for (int r = 0; r < data.length; r++) {
-            writer.printf("Row %d total: %.2f%n", r, SalesDataUtility.getRowTotal(data, r));
-        }
-
-        // Determine maximum number of columns across all rows
-        int maxCols = 0;
-        for (double[] row : data) {
-            if (row.length > maxCols) maxCols = row.length;
-        }
-
-        // Column totals
-        for (int c = 0; c < maxCols; c++) {
-            writer.printf("Column %d total: %.2f%n", c, SalesDataUtility.getColumnTotal(data, c));
-        }
-
-        writer.close();
-    }
+			
+		}
+	}
 }
+
